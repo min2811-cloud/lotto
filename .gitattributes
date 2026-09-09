@@ -1,0 +1,3 @@
+# 배치 파일은 항상 CRLF (cmd.exe 호환)
+*.bat text eol=crlf
+*.cmd text eol=crlf
