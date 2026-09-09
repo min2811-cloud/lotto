@@ -1,8 +1,10 @@
-# 구글 서비스 연동 (시트 / Gmail / 드라이브)
+# 로또 번호 생성 + 이미지 + 카카오 전송
+Pillow>=10.3.0
+requests>=2.31.0
+python-dotenv>=1.0.1
+
+# 구글 서비스 연동 (시트 / Gmail / 드라이브) — 나중에 리포트 자동화용
 google-api-python-client>=2.130.0
 google-auth>=2.30.0
 google-auth-oauthlib>=1.2.0
 google-auth-httplib2>=0.2.0
-
-# .env 파일에서 설정값 읽기
-python-dotenv>=1.0.1

@@ -12,9 +12,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 현재 상태
 
-프로젝트 뼈대가 초기화되었다. git 리포지토리 생성 완료. 폴더 구조(`workflows/`, `tools/`, `.tmp/`), `.gitignore`, `.env.example`, `requirements.txt` 존재.
+프로젝트 뼈대 초기화 완료. git 리포지토리 있음.
 
-아직 실제 Workflow 는 없다. Tool 은 `tools/google_auth.py`(구글 로그인 공통 처리) 하나뿐이다.
+**작동 중인 업무: 주간 로또 번호 생성** (`workflows/lotto_weekly.md`).
+- `run.py` / `로또번호.bat` — 최신 당첨번호 반영 → 20게임 생성 → PNG → (연결 시) 카카오톡 전송
+- 데이터 출처: 동행복권 공식 JSON은 막힘. 공개 미러 `smok95.github.io/lotto` 사용 (`tools/lotto_data.py`)
+- 카카오톡 전송은 사용자가 `kakao_setup.md` 대로 1회 연결해야 켜짐 (`kakao_token.json` 생성)
+
+Tool 목록:
+- `tools/lotto_data.py` — 당첨번호 데이터 가져오기/캐시
+- `tools/lotto_rules.py` — 20게임 생성 규칙 (순수 함수, seed 재현 가능)
+- `tools/lotto_image.py` — PNG 렌더 (Pillow, 맑은 고딕)
+- `tools/kakao_auth.py` / `tools/kakao_send.py` — 카카오톡 나에게 보내기
+- `tools/google_auth.py` — 구글 로그인 공통 (리포트 자동화용, 아직 미사용)
 
 ### 준비 (최초 1회)
 
@@ -24,13 +34,16 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-그다음 구글 OAuth 파일(`credentials.json`)을 프로젝트 폴더에 두고, `.env.example` 을 복사해 `.env` 를 만든다.
+`.env.example` 을 복사해 `.env` 생성. 카카오톡 전송을 쓰려면 `kakao_setup.md` 참고.
+구글 리포트 자동화를 시작할 때만 `credentials.json` 필요.
 
 ### 실행 / 테스트
 
-- 구글 로그인 확인: `python -m tools.google_auth`
-- Tool 은 파이썬으로 작성하며, 만들어지는 대로 `tools/README.md` 와 이 문서에 실행·테스트 방법을 추가한다.
-- 린트/자동 테스트 프레임워크는 아직 없다. 필요해지면 추가한다.
+- 로또 번호 생성: `python run.py` (또는 `로또번호.bat` 더블클릭)
+- 규칙 검사: `python -m tests.test_rules`
+- 개별 Tool 점검: `python -m tools.lotto_data` / `python -m tools.lotto_image`
+- 콘솔 한글 깨짐 방지: 스크립트에서 stdout 을 utf-8 로 재설정함. 수동 실행 시 `chcp 65001` 권장.
+- 린트/pytest 는 아직 도입 안 함. `tests/` 는 평범한 assert 스크립트.
 
 ## 아키텍처 — 생각과 실행의 분리
 
@@ -47,13 +60,19 @@ pip install -r requirements.txt
 ```
 workflows/          # 각 업무의 단계별 지시서
 tools/              # 행동을 실행하는 파이썬 파일
+tests/              # 규칙 검증용 assert 스크립트
+data/               # 당첨번호 캐시(lotto_draws.json) + output/ 생성 이미지(gitignore)
 .tmp/               # 임시 작업 공간. 통째로 삭제해도 무방
+run.py              # 로또 주간 실행 진입점
+로또번호.bat        # 사장님용 더블클릭 실행
+카카오연결.bat      # 카카오톡 최초 연결
 .env                # 모든 비밀. API 키, 인증 정보
-credentials.json    # OAuth 인증 (gitignore)
-token.json          # OAuth 토큰 (gitignore)
+credentials.json    # 구글 OAuth 인증 (gitignore)
+token.json          # 구글 OAuth 토큰 (gitignore)
+kakao_token.json    # 카카오 토큰 (gitignore)
 ```
 
-최종 결과물은 항상 사용자가 직접 접근 가능한 클라우드 서비스로 나간다. 로컬 `.tmp/`는 전부 일회용.
+리포트류 결과물은 사용자가 접근 가능한 클라우드 서비스로 내보낸다. 로또 번호는 PNG로 만들어 카카오톡으로 보낸다. 로컬 `.tmp/`와 `data/output/`는 일회용.
 
 ## 작업 규칙
 

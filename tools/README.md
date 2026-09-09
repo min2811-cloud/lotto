@@ -10,7 +10,12 @@
 
 ## 현재 있는 Tool
 
-- `google_auth.py` — 구글(시트/Gmail/드라이브) 로그인 공통 처리. 다른 Tool 들이 가져다 씁니다.
+- `lotto_data.py` — 로또 당첨번호 데이터 가져오기 + `data/lotto_draws.json` 캐시
+- `lotto_rules.py` — 20게임 생성 규칙 (순수 함수). `python -m tests.test_rules` 로 검증
+- `lotto_image.py` — 추천 번호를 PNG 한 장으로 렌더 (Pillow, 맑은 고딕)
+- `kakao_auth.py` — 카카오톡 "나에게 보내기" 최초 1회 연결
+- `kakao_send.py` — 만들어진 PNG 를 카카오톡으로 전송
+- `google_auth.py` — 구글(시트/Gmail/드라이브) 로그인 공통 처리 (리포트 자동화용, 아직 미사용)
 
 ## 실행 / 테스트 방법
 
@@ -22,7 +27,20 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-구글 로그인 최초 연결 확인:
+로또 번호 생성 (메인 업무):
+
+```powershell
+python run.py            # 또는 로또번호.bat 더블클릭
+python -m tests.test_rules   # 규칙이 지켜지는지 검사
+```
+
+카카오톡 연결 (최초 1회, `kakao_setup.md` 참고):
+
+```powershell
+python -m tools.kakao_auth
+```
+
+구글 로그인 (리포트 자동화 시작할 때):
 
 ```powershell
 python -m tools.google_auth

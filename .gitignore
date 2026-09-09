@@ -3,9 +3,13 @@
 credentials.json
 token.json
 *.token.json
+kakao_token.json
 
 # 임시 작업 공간
 .tmp/
+
+# 생성된 번호 이미지
+data/output/
 
 # 파이썬
 __pycache__/
