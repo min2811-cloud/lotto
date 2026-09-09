@@ -1,0 +1,21 @@
+# 비밀 — 절대 커밋 금지
+.env
+credentials.json
+token.json
+*.token.json
+
+# 임시 작업 공간
+.tmp/
+
+# 파이썬
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# OS / 에디터
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
