@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>rules.js 규칙 검증</title>
+  <style>
+    body { font-family: 'Malgun Gothic', system-ui, sans-serif; margin: 20px; line-height: 1.5; }
+    #verdict { font-size: 22px; font-weight: 700; padding: 12px 16px; border-radius: 10px; }
+    .ok { background: #e6f4ea; color: #137333; }
+    .bad { background: #fce8e6; color: #c5221f; }
+    li.pass::marker { content: "✅ "; }
+    li.fail::marker { content: "❌ "; }
+    li.fail { color: #c5221f; font-weight: 700; }
+    code { background: #f1f3f4; padding: 1px 4px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>rules.js 규칙 검증</h1>
+  <div id="verdict">실행 중...</div>
+  <ul id="results"></ul>
+
+  <script src="./seed-draws.js"></script>
+  <script src="./rules.js"></script>
+  <script>
+    (function () {
+      var R = window.Lotto.rules;
+      var results = document.getElementById("results");
+      var failed = 0;
+
+      function check(name, fn) {
+        var ok = false, err = "";
+        try { ok = fn() === true; } catch (e) { ok = false; err = " — " + e.message; }
+        if (!ok) failed++;
+        var li = document.createElement("li");
+        li.className = ok ? "pass" : "fail";
+        li.textContent = name + (ok ? "" : (" (실패" + err + ")"));
+        results.appendChild(li);
+      }
+
+      var draws = window.LOTTO_SEED_DRAWS.map(function (r) {
+        return { round: r[0], numbers: r.slice(1, 7), bonus: r[7], date: r[8] };
+      });
+
+      function inter(a, b) { var s = new Set(b); return a.filter(function (x) { return s.has(x); }); }
+      function eqArr(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+
+      var res = R.generate(draws, R.DEFAULT_CONFIG, { seed: 12345 });
+      var byKey = {};
+      res.groups.forEach(function (g) { byKey[g.key] = g.games; });
+
+      check("그룹 5개 · 게임수 [4,4,2,5,5]", function () {
+        return eqArr(["overlap0", "overlap1", "overlap2", "stat_recent", "stat_all"].map(function (k) { return byKey[k].length; }), [4, 4, 2, 5, 5]);
+      });
+      check("총 20게임", function () { return res.total_games === 20; });
+
+      [["overlap0", 0], ["overlap1", 1], ["overlap2", 2]].forEach(function (pair) {
+        check("그룹 " + pair[0] + ": 직전 회차와 정확히 " + pair[1] + "개 겹침", function () {
+          return byKey[pair[0]].every(function (game) {
+            return new Set(game).size === 6 && inter(game, res.base_numbers).length === pair[1];
+          });
+        });
+      });
+
+      ["stat_recent", "stat_all"].forEach(function (key) {
+        var b = res.stats[key];
+        check("그룹 " + key + ": 상/중/하위 15개가 1~45의 분할", function () {
+          var t = new Set(b.top15), m = new Set(b.mid15), bo = new Set(b.bottom15);
+          if (t.size !== 15 || m.size !== 15 || bo.size !== 15) return false;
+          var all = new Set(b.top15.concat(b.mid15).concat(b.bottom15));
+          return all.size === 45;
+        });
+        check("그룹 " + key + ": 각 게임이 상2·중2·하2", function () {
+          return byKey[key].every(function (game) {
+            return inter(game, b.top15).length === 2 && inter(game, b.mid15).length === 2 && inter(game, b.bottom15).length === 2;
+          });
+        });
+      });
+
+      check("20게임 모두 서로 다름", function () {
+        var all = [];
+        res.groups.forEach(function (g) { g.games.forEach(function (game) { all.push(game.join(",")); }); });
+        return all.length === 20 && new Set(all).size === 20;
+      });
+
+      check("모든 번호 1~45, 오름차순", function () {
+        return res.groups.every(function (g) {
+          return g.games.every(function (game) {
+            return game.every(function (n) { return n >= 1 && n <= 45; }) && eqArr(game, game.slice().sort(function (a, b) { return a - b; }));
+          });
+        });
+      });
+
+      check("같은 seed면 결과 동일", function () {
+        var a = R.generate(draws, R.DEFAULT_CONFIG, { seed: 777 });
+        var b = R.generate(draws, R.DEFAULT_CONFIG, { seed: 777 });
+        return JSON.stringify(a.groups) === JSON.stringify(b.groups);
+      });
+
+      check("설정 변경: 3/3/2/4/4 → 총 16게임", function () {
+        var cfg = JSON.parse(JSON.stringify(R.DEFAULT_CONFIG));
+        cfg.overlap[0].count = 3; cfg.overlap[1].count = 3;
+        cfg.stat[0].count = 4; cfg.stat[1].count = 4;
+        var r = R.generate(draws, cfg, { seed: 1 });
+        return r.total_games === 16;
+      });
+
+      check("기준 회차 수 변경 반영 (window 50)", function () {
+        var cfg = JSON.parse(JSON.stringify(R.DEFAULT_CONFIG));
+        cfg.stat[0].window = 50;
+        var r = R.generate(draws, cfg, { seed: 1 });
+        return r.stats.stat_recent.count === 50;
+      });
+
+      var v = document.getElementById("verdict");
+      if (failed === 0) { v.className = "ok"; v.textContent = "전체 통과 ✅"; }
+      else { v.className = "bad"; v.textContent = failed + "개 실패 ❌"; }
+      document.title = (failed === 0 ? "PASS" : "FAIL") + " — rules.js";
+    })();
+  </script>
+</body>
+</html>

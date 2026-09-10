@@ -14,17 +14,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 프로젝트 뼈대 초기화 완료. git 리포지토리 있음.
 
-**작동 중인 업무: 주간 로또 번호 생성** (`workflows/lotto_weekly.md`).
+**메인: 휴대폰 앱 (PWA) — `docs/`.** 오프라인 로또 번호 조합기.
+- 순수 HTML/CSS/JS, 프레임워크 없음. `<script>` 순서 로드, 전역 `window.Lotto.*`.
+- `docs/rules.js` 는 `tools/lotto_rules.py` 의 **포팅**이다. **규칙의 기준은 파이썬**이고, 규칙을 바꾸면 양쪽 다 고친다.
+- 전 회차 데이터는 `docs/seed-draws.js` 에 내장 (`scripts/build_app_data.py` 가 `data/lotto_draws.json` 에서 생성).
+- 새 회차 fetch: `docs/lottery-api.js` → `smok95.github.io/lotto` 미러 (CORS 허용됨). 오프라인이면 수동 입력.
+- 서비스워커(`docs/sw.js`)가 앱 파일 캐시 → 첫 방문 후 완전 오프라인. 배포 때마다 `CACHE` 버전 +1 (`scripts/deploy_prep.py`).
+- 규칙 검증: `docs/selftest.html` 를 브라우저로 열어 PASS 확인.
+- 배포: `앱_설치.md` (Netlify Drop 또는 GitHub Pages `/docs`). GitHub Pages 쓰면 `배포.bat` 더블클릭으로 자동.
+- 헤드리스 검증 스크립트 예시는 스크래치패드에 있었음 (playwright). 재현하려면 `pip install playwright && playwright install chromium`.
+
+**보조: 주간 로또 번호 생성 (데스크톱)** (`workflows/lotto_weekly.md`).
 - `run.py` / `로또번호.bat` — 최신 당첨번호 반영 → 20게임 생성 → PNG → (연결 시) 카카오톡 전송
 - 데이터 출처: 동행복권 공식 JSON은 막힘. 공개 미러 `smok95.github.io/lotto` 사용 (`tools/lotto_data.py`)
 - 카카오톡 전송은 사용자가 `kakao_setup.md` 대로 1회 연결해야 켜짐 (`kakao_token.json` 생성)
 
-Tool 목록:
+Tool / 스크립트 목록:
 - `tools/lotto_data.py` — 당첨번호 데이터 가져오기/캐시
-- `tools/lotto_rules.py` — 20게임 생성 규칙 (순수 함수, seed 재현 가능)
+- `tools/lotto_rules.py` — 20게임 생성 규칙 (순수 함수, seed 재현 가능) ← **규칙 원본**
 - `tools/lotto_image.py` — PNG 렌더 (Pillow, 맑은 고딕)
 - `tools/kakao_auth.py` / `tools/kakao_send.py` — 카카오톡 나에게 보내기
 - `tools/google_auth.py` — 구글 로그인 공통 (리포트 자동화용, 아직 미사용)
+- `scripts/build_app_data.py` — `data/lotto_draws.json` → `docs/seed-draws.js`
+- `scripts/make_icons.py` — 앱 아이콘 생성 (Pillow)
+- `scripts/deploy_prep.py` — 배포 전 데이터 갱신 + sw.js 캐시 버전 올림
 
 ### 준비 (최초 1회)
 
@@ -39,10 +52,14 @@ pip install -r requirements.txt
 
 ### 실행 / 테스트
 
-- 로또 번호 생성: `python run.py` (또는 `로또번호.bat` 더블클릭)
-- 규칙 검사: `python -m tests.test_rules`
+- **앱 로컬 실행:** `cd docs && python -m http.server 8000` → 브라우저 `localhost:8000`
+- **앱 규칙 검증:** `localhost:8000/selftest.html` → "전체 통과" 확인
+- **앱 데이터/아이콘 재생성:** `python scripts/build_app_data.py`, `python scripts/make_icons.py`
+- 데스크톱 로또 번호 생성: `python run.py` (또는 `로또번호.bat` 더블클릭)
+- 파이썬 규칙 검사: `python -m tests.test_rules`
 - 개별 Tool 점검: `python -m tools.lotto_data` / `python -m tools.lotto_image`
 - 콘솔 한글 깨짐 방지: 스크립트에서 stdout 을 utf-8 로 재설정함. 수동 실행 시 `chcp 65001` 권장.
+- `.bat` 파일은 ASCII 만 (한글 넣으면 cmd 가 깨뜨림). 안내 문구는 `.md` 에.
 - 린트/pytest 는 아직 도입 안 함. `tests/` 는 평범한 assert 스크립트.
 
 ## 아키텍처 — 생각과 실행의 분리
@@ -58,14 +75,21 @@ pip install -r requirements.txt
 ## 파일 구조
 
 ```
+docs/               # 휴대폰 앱(PWA). 호스팅이 이 폴더를 서빙. index.html/app.js/rules.js/...
+  seed-draws.js     #   내장 전 회차 데이터 (생성물)
+  sw.js             #   서비스워커 (오프라인 캐시)
+  selftest.html     #   규칙 검증 페이지
+  icons/            #   앱 아이콘 (생성물)
+scripts/            # 빌드/배포 보조 스크립트 (build_app_data / make_icons / deploy_prep)
 workflows/          # 각 업무의 단계별 지시서
-tools/              # 행동을 실행하는 파이썬 파일
+tools/              # 행동을 실행하는 파이썬 파일 (규칙 원본: lotto_rules.py)
 tests/              # 규칙 검증용 assert 스크립트
 data/               # 당첨번호 캐시(lotto_draws.json) + output/ 생성 이미지(gitignore)
 .tmp/               # 임시 작업 공간. 통째로 삭제해도 무방
-run.py              # 로또 주간 실행 진입점
-로또번호.bat        # 사장님용 더블클릭 실행
+run.py              # 데스크톱 로또 주간 실행 진입점
+로또번호.bat        # 데스크톱 실행 (더블클릭)
 카카오연결.bat      # 카카오톡 최초 연결
+배포.bat            # 앱 업데이트 → git push (GitHub Pages 배포 시)
 .env                # 모든 비밀. API 키, 인증 정보
 credentials.json    # 구글 OAuth 인증 (gitignore)
 token.json          # 구글 OAuth 토큰 (gitignore)

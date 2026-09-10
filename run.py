@@ -41,6 +41,13 @@ def main() -> None:
     render(result, OUTPUT_DIR / "latest.png")
     print(f"이미지 저장: {png_path}")
 
+    # 휴대폰 앱에 내장되는 데이터도 같이 갱신 (있으면)
+    try:
+        import scripts.build_app_data as _bad  # noqa: WPS433
+        _bad.main()
+    except Exception:
+        pass
+
     title = f"로또 번호 추천 ({result['base_round']}회 기준)"
     description = f"20게임 · {result['generated_at'].replace('T', ' ')} 생성"
 

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <title>로또 번호 조합기</title>
+  <meta name="description" content="오프라인에서도 되는 로또 6/45 번호 조합기" />
+  <meta name="theme-color" content="#2e5bff" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icons/favicon.png" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="로또조합" />
+  <link rel="stylesheet" href="./app.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="appbar">🍀 로또 번호 조합기</header>
+
+    <main>
+      <!-- 뽑기 -->
+      <section class="screen" id="screen-generate">
+        <div class="card" id="gen-base"></div>
+        <button class="btn" id="btn-generate">20게임 뽑기</button>
+        <button class="btn secondary" id="btn-reroll" hidden>고정 안 한 것만 다시 뽑기</button>
+        <div id="gen-actions" hidden>
+          <div class="btn-row">
+            <button class="btn" id="btn-save-img">사진으로 저장</button>
+            <button class="btn ghost" id="btn-share-img">공유</button>
+          </div>
+          <p class="hint">아이폰: '이미지 저장'을 누르면 사진 앱에 저장됩니다. 저장이 안 뜨면 공유 → 이미지 저장.</p>
+        </div>
+        <div class="card" id="gen-result"></div>
+      </section>
+
+      <!-- 회차 -->
+      <section class="screen" id="screen-draws" hidden>
+        <div class="card" id="draws-summary"></div>
+        <button class="btn" id="btn-fetch">인터넷에서 새 회차 가져오기</button>
+        <button class="btn secondary" id="btn-manual-toggle">직접 입력</button>
+        <form class="card stack" id="manual-form" hidden>
+          <label>회차 번호<input name="round" type="number" inputmode="numeric" required /></label>
+          <label>추첨일 (YYYY-MM-DD)<input name="date" type="text" placeholder="2026-09-13" pattern="\d{4}-\d{2}-\d{2}" required /></label>
+          <label>당첨번호 6개 (띄어쓰기 또는 쉼표)<input name="numbers" type="text" inputmode="numeric" placeholder="3 11 17 25 38 42" required /></label>
+          <label>보너스 번호<input name="bonus" type="number" inputmode="numeric" required /></label>
+          <button class="btn" type="submit">저장</button>
+        </form>
+        <h2 class="sec">최근 회차</h2>
+        <div class="card" id="draws-list"></div>
+      </section>
+
+      <!-- 기록 -->
+      <section class="screen" id="screen-history" hidden>
+        <div class="card" id="history-list"></div>
+        <button class="btn secondary" id="btn-clear-history">기록 모두 지우기</button>
+      </section>
+
+      <!-- 설정 -->
+      <section class="screen" id="screen-settings" hidden>
+        <h2 class="sec">규칙 — 게임 수와 기준 회차 수</h2>
+        <div class="card">
+          <div id="settings-form"></div>
+          <div id="settings-total"></div>
+        </div>
+        <button class="btn secondary" id="btn-reset-settings">기본값으로 되돌리기</button>
+        <p class="hint">겹침 개수(0/1/2)와 통계 그룹의 뽑는 방식(각 15개 중 2개)은 고정입니다. 게임 수와 '최근 통계' 기준 회차 수만 조절됩니다.</p>
+      </section>
+    </main>
+
+    <nav class="tabbar">
+      <button data-tab="generate" class="active"><span class="ico">🎲</span>뽑기</button>
+      <button data-tab="draws"><span class="ico">📅</span>회차</button>
+      <button data-tab="history"><span class="ico">🕘</span>기록</button>
+      <button data-tab="settings"><span class="ico">⚙️</span>설정</button>
+    </nav>
+  </div>
+  <div id="toast"></div>
+
+  <script src="./seed-draws.js"></script>
+  <script src="./rules.js"></script>
+  <script src="./store.js"></script>
+  <script src="./lottery-api.js"></script>
+  <script src="./image.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
