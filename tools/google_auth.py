@@ -23,11 +23,12 @@ from googleapiclient.discovery import build
 
 load_dotenv()
 
-# 필요한 권한 범위. 나중에 범위를 바꾸면 token.json 을 지우고 다시 로그인해야 합니다.
+# 필요한 권한 범위 (최소 권한). 나중에 범위를 바꾸면 token.json 을 지우고 다시 로그인해야 합니다.
+# drive.file = 이 앱이 만든/연 파일만 접근 (전체 드라이브 접근 아님).
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/gmail.send",
-    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/drive.file",
 ]
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -58,6 +59,10 @@ def get_credentials() -> Credentials:
         creds = flow.run_local_server(port=0)
 
     TOKEN_FILE.write_text(creds.to_json(), encoding="utf-8")
+    try:
+        os.chmod(TOKEN_FILE, 0o600)
+    except OSError:
+        pass
     return creds
 
 

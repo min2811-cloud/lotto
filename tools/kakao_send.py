@@ -38,6 +38,10 @@ def _load_token() -> dict:
 def _save_token(token: dict) -> None:
     token["obtained_at"] = int(time.time())
     TOKEN_FILE.write_text(json.dumps(token, ensure_ascii=False, indent=2), encoding="utf-8")
+    try:
+        os.chmod(TOKEN_FILE, 0o600)
+    except OSError:
+        pass
 
 
 def _valid_access_token() -> str:
@@ -72,7 +76,7 @@ def send_image(png_path: str | Path, title: str, description: str) -> None:
         up = requests.post(IMAGE_UPLOAD_URL, headers=headers,
                            files={"file": (png_path.name, fh, "image/png")}, timeout=30)
     if up.status_code != 200:
-        raise RuntimeError(f"카카오 이미지 업로드 실패: {up.status_code} {up.text}")
+        raise RuntimeError(f"카카오 이미지 업로드 실패: {up.status_code} {up.text[:200]}")
     original = up.json()["infos"]["original"]
     image_url = original["url"]
 
@@ -93,7 +97,7 @@ def send_image(png_path: str | Path, title: str, description: str) -> None:
     send = requests.post(MEMO_SEND_URL, headers=headers,
                          data={"template_object": json.dumps(template)}, timeout=15)
     if send.status_code != 200:
-        raise RuntimeError(f"카카오 전송 실패: {send.status_code} {send.text}")
+        raise RuntimeError(f"카카오 전송 실패: {send.status_code} {send.text[:200]}")
 
 
 if __name__ == "__main__":

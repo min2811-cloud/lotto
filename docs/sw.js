@@ -1,6 +1,6 @@
 /* 서비스워커 — 앱을 오프라인에서 쓸 수 있게 파일을 캐시한다.
    배포할 때마다 CACHE 버전을 올린다 (배포.bat 이 자동으로 올려줌). */
-var CACHE = "lotto-v1";
+var CACHE = "lotto-v2";
 
 var CORE = [
   "./",

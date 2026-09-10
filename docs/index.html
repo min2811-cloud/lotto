@@ -2,6 +2,10 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
+  <!-- script-src 'self' 가 핵심 (인라인 스크립트/eval 차단 = XSS 코드 실행 불가).
+       style-src 는 색/막대높이를 JS 로 지정해서 'unsafe-inline' 허용 (주입 지점 없음). -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://smok95.github.io; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+  <meta name="referrer" content="no-referrer" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <title>로또 번호 조합기</title>
   <meta name="description" content="오프라인에서도 되는 로또 6/45 번호 조합기" />

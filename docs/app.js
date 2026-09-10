@@ -20,8 +20,7 @@
     var el = document.createElement(tag);
     if (props) Object.keys(props).forEach(function (k) {
       if (k === "class") el.className = props[k];
-      else if (k === "text") el.textContent = props[k];
-      else if (k === "html") el.innerHTML = props[k];
+      else if (k === "text") el.textContent = props[k]; // 항상 textContent — HTML 주입 경로 없음
       else if (k.slice(0, 2) === "on") el.addEventListener(k.slice(2), props[k]);
       else el.setAttribute(k, props[k]);
     });

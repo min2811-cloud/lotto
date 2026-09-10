@@ -65,13 +65,19 @@
     return out;
   }
 
+  function hiddenRounds() {
+    var h = lsGet("lotto.hiddenRounds");
+    return new Set(Array.isArray(h) ? h : []);
+  }
+
   // 저장된 사용자 데이터 + 내장 seed 병합해서 항상 최신 상태로.
   function loadDraws() {
     var stored = lsGet(K_DRAWS);
     if (!Array.isArray(stored)) stored = [];
     stored = stored.filter(isValidDraw).map(normalize);
     var merged = unionByRound(stored, seedDraws());
-    return merged;
+    var hidden = hiddenRounds();
+    return merged.filter(function (d) { return !hidden.has(d.round); });
   }
 
   // 새 회차들을 저장분에 병합. 반환: {added:[회차번호...], total, latest}
@@ -80,6 +86,14 @@
     var stored = lsGet(K_DRAWS);
     if (!Array.isArray(stored)) stored = [];
     stored = stored.filter(isValidDraw).map(normalize);
+
+    // 다시 추가되는 회차는 '가리기' 목록에서 뺀다
+    if (incoming.length) {
+      var inRounds = new Set(incoming.map(function (d) { return d.round; }));
+      var hid = lsGet("lotto.hiddenRounds") || [];
+      var kept = hid.filter(function (r) { return !inRounds.has(r); });
+      if (kept.length !== hid.length) lsSet("lotto.hiddenRounds", kept);
+    }
 
     var before = new Set(unionByRound(stored, seedDraws()).map(function (d) { return d.round; }));
     var merged = unionByRound(incoming, stored); // 같은 회차면 새로 받은 값 우선

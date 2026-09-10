@@ -11,7 +11,7 @@ set /p REPOURL="URL: "
 if "%REPOURL%"=="" goto end
 
 git remote remove origin 2>nul
-git remote add origin %REPOURL%
+git remote add origin "%REPOURL%"
 git branch -M main
 git add -A
 git commit -m "app" 2>nul
@@ -19,7 +19,7 @@ git push -u origin main
 
 echo.
 echo If a browser window opened, log in to GitHub to allow the upload.
-echo Then go to your repo: Settings - Pages - Deploy from a branch - main - /docs - Save
+echo Then in your repo: Settings - Pages - Deploy from a branch - main - /docs - Save
 
 :end
 echo.

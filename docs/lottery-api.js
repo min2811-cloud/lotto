@@ -15,18 +15,28 @@
     };
   }
 
+  var MAX_BYTES = 3 * 1024 * 1024; // 응답 크기 상한 (all.json ~420KB)
+
   function getJson(url) {
-    return fetch(url, { cache: "no-store" }).then(function (r) {
+    return fetch(url, { cache: "no-store", redirect: "error", referrerPolicy: "no-referrer" }).then(function (r) {
       if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
+      var len = Number(r.headers.get("content-length") || 0);
+      if (len > MAX_BYTES) throw new Error("응답이 너무 큽니다");
+      return r.text().then(function (t) {
+        if (t.length > MAX_BYTES) throw new Error("응답이 너무 큽니다");
+        return JSON.parse(t);
+      });
     });
   }
+
+  function validRound(n) { return Number.isInteger(n) && n > 0 && n < 100000; }
 
   /* 저장된 최신 회차보다 새로운 회차가 있으면 받아서 병합한다.
      반환: Lotto.store.mergeDraws() 결과 (added / total / latest) */
   function fetchNew(currentLatestRound) {
     return getJson(BASE + "latest.json").then(function (latestRaw) {
       var latest = normalize(latestRaw);
+      if (!validRound(latest.round)) throw new Error("받은 데이터가 올바르지 않습니다");
       var haveUpTo = currentLatestRound || 0;
       if (latest.round <= haveUpTo) {
         return { added: [], total: null, latest: latest, upToDate: true };
