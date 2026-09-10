@@ -112,6 +112,7 @@
     var c = lsGet(K_CONFIG);
     var def = window.Lotto.rules.DEFAULT_CONFIG;
     if (!c || !c.overlap || !c.stat) return JSON.parse(JSON.stringify(def));
+    if (!Array.isArray(c.exclude)) c.exclude = [];
     return c;
   }
   function saveConfig(c) { lsSet(K_CONFIG, c); }
@@ -140,9 +141,16 @@
   }
   function clearHistory() { lsSet(K_HISTORY, []); }
 
+  function loadDrawByRound(round) {
+    var all = loadDraws();
+    for (var i = all.length - 1; i >= 0; i--) if (all[i].round === round) return all[i];
+    return null;
+  }
+
   window.Lotto = window.Lotto || {};
   window.Lotto.store = {
     loadDraws: loadDraws,
+    loadDrawByRound: loadDrawByRound,
     mergeDraws: mergeDraws,
     deleteDraw: deleteDraw,
     isValidDraw: isValidDraw,

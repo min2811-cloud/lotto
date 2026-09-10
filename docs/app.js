@@ -69,6 +69,7 @@
     $all(".screen").forEach(function (s) { s.hidden = s.id !== "screen-" + name; });
     $all(".tabbar button").forEach(function (b) { b.classList.toggle("active", b.dataset.tab === name); });
     if (name === "draws") renderDraws();
+    if (name === "check") renderCheck();
     if (name === "history") renderHistory();
     if (name === "settings") renderSettings();
     if (name === "generate") renderGenerate();
@@ -91,6 +92,7 @@
     $("#btn-generate").textContent = totalGames() + "게임 뽑기";
     $("#gen-actions").hidden = !state.result;
     $("#btn-reroll").hidden = !state.result;
+    try { document.title = base.round + "회 · 로또 조합기"; } catch (e) {}
   }
 
   function doGenerate(keepLocked) {
@@ -180,6 +182,8 @@
         } })
       ));
     });
+
+    if (!$("#freq-chart-card").hidden) renderFreqChart();
   }
 
   function fetchNewDraws() {
@@ -218,6 +222,121 @@
     $("#manual-form").hidden = true;
     renderDraws(); renderGenerate();
     toast(round + "회 저장 완료. 총 " + res.total + "개.");
+  }
+
+  /* ---------- 번호별 통계 그래프 (회차 탭) ---------- */
+  var freqRange = "100";
+  function renderFreqChart() {
+    var draws = state.draws;
+    var subset = freqRange === "all" ? draws : draws.slice(-100);
+    var counts = R.frequencyCounts(subset).slice(1, 46);
+    var max = Math.max.apply(null, counts);
+    var min = Math.min.apply(null, counts);
+    var span = Math.max(max - min, 1);
+    var chart = $("#freq-chart");
+    chart.innerHTML = "";
+    for (var n = 1; n <= 45; n++) {
+      var c = counts[n - 1];
+      var pct = Math.round((c - min) / span * 82) + 15; // 15~97%, 차이 강조
+      var col = h("div", { class: "fbar", title: n + "번: " + c + "회" },
+        h("div", { class: "fbar-fill" }),
+        h("div", { class: "fbar-n", text: (n % 5 === 0 || n === 1) ? String(n) : "" })
+      );
+      var fill = col.querySelector(".fbar-fill");
+      fill.style.height = pct + "%";
+      fill.style.background = R.ballColor(n);
+      chart.appendChild(col);
+    }
+    var ranking = R.frequencyRanking(subset);
+    $("#freq-note").textContent =
+      "기준 " + subset.length + "회차 · 많이: " + ranking.slice(0, 5).join(", ") +
+      " · 적게: " + ranking.slice(-5).reverse().join(", ");
+    $all("#freq-range button").forEach(function (b) {
+      b.classList.toggle("active", b.dataset.range === freqRange);
+    });
+  }
+
+  /* ---------- 당첨 확인 ---------- */
+  function rankLabel(rank) { return rank === 0 ? "" : rank + "등"; }
+
+  function renderCheck() {
+    var input = $("#check-round");
+    if (!input.value) input.value = latestRound();
+    var round = parseInt(input.value, 10);
+    var draw = S.loadDrawByRound(round);
+    var winEl = $("#check-win");
+    var list = $("#check-list");
+    list.innerHTML = "";
+
+    if (!draw) {
+      winEl.textContent = round + "회 당첨번호가 저장돼 있지 않습니다. '회차' 탭에서 먼저 받아오거나 입력하세요.";
+      return;
+    }
+    winEl.innerHTML = "";
+    winEl.appendChild(h("span", { text: round + "회 당첨번호  " }));
+    winEl.appendChild(ballRow(draw.numbers, true));
+    winEl.appendChild(h("span", { class: "muted small", text: " +" + draw.bonus }));
+
+    var items = S.loadHistory();
+    if (!items.length) {
+      list.appendChild(h("p", { class: "muted", text: "'뽑기'에서 번호를 먼저 뽑으면 여기서 대조합니다." }));
+      return;
+    }
+
+    items.forEach(function (item) {
+      var tally = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+      var rows = [];
+      var no = 1;
+      item.groups.forEach(function (g) {
+        g.games.forEach(function (game) {
+          var r = R.checkGame(game, draw.numbers, draw.bonus);
+          if (r.rank) tally[r.rank]++;
+          var win = new Set(draw.numbers);
+          var balls = h("div", { class: "balls" });
+          game.slice().sort(function (a, b) { return a - b; }).forEach(function (nn) {
+            var b = ball(nn, false);
+            if (win.has(nn)) b.classList.add("hit");
+            balls.appendChild(b);
+          });
+          rows.push(h("div", { class: "game" },
+            h("span", { class: "gno", text: String(no++) }),
+            balls,
+            r.rank ? h("span", { class: "rank rank" + r.rank, text: rankLabel(r.rank) })
+                   : h("span", { class: "muted small", text: r.matched + "개" })
+          ));
+        });
+      });
+      var summ = [1, 2, 3, 4, 5].filter(function (k) { return tally[k]; })
+        .map(function (k) { return k + "등 " + tally[k]; }).join(" · ") || "당첨 없음";
+      var head = h("button", { class: "hist-head" },
+        h("span", { text: item.at + " · " + item.total_games + "게임" }),
+        h("span", { class: (summ === "당첨 없음" ? "muted small" : "win-summary"), text: summ })
+      );
+      var body = h("div", { class: "hist-body", hidden: true });
+      rows.forEach(function (r) { body.appendChild(r); });
+      head.addEventListener("click", function () { body.hidden = !body.hidden; });
+      list.appendChild(h("div", { class: "hist-item" }, head, body));
+    });
+  }
+
+  /* ---------- 새 회차 배너 ---------- */
+  function maybeShowBanner() {
+    var banner = $("#new-draw-banner");
+    var today = new Date();
+    var todayStr = today.toISOString().slice(0, 10);
+    var hidden = null;
+    try { hidden = localStorage.getItem("lotto.bannerHideDate"); } catch (e) {}
+    if (hidden === todayStr) return;
+
+    var latest = state.draws[state.draws.length - 1];
+    if (!latest) return;
+    var ageDays = (today - new Date(latest.date + "T12:00:00")) / 86400000;
+    var dow = today.getDay(); // 0=일 6=토
+    var afterDraw = (dow === 6 && today.getHours() >= 21) || dow === 0 || dow === 1;
+    if (afterDraw && ageDays >= 7) {
+      $("#banner-text").textContent = "새 회차가 나왔을 수 있어요. (저장된 최신: " + latest.round + "회)";
+      banner.hidden = false;
+    }
   }
 
   /* ---------- 기록 ---------- */
@@ -291,6 +410,34 @@
       form.appendChild(h("label", { class: "field" }, h("span", { text: fd.label }), input));
     });
     $("#settings-total").textContent = "총 " + totalGames() + "게임";
+    renderExcludeGrid();
+  }
+
+  function renderExcludeGrid() {
+    var grid = $("#exclude-grid");
+    if (!state.config.exclude) state.config.exclude = [];
+    var ex = new Set(state.config.exclude);
+    grid.innerHTML = "";
+    R.ALL.forEach(function (n) {
+      var chip = h("button", {
+        class: "chip" + (ex.has(n) ? " on" : ""), text: String(n),
+        onclick: function () {
+          if (ex.has(n)) ex.delete(n); else ex.add(n);
+          state.config.exclude = Array.from(ex).sort(function (a, b) { return a - b; });
+          S.saveConfig(state.config);
+          chip.classList.toggle("on");
+          updateExcludeNote();
+        }
+      });
+      grid.appendChild(chip);
+    });
+    updateExcludeNote();
+  }
+  function updateExcludeNote() {
+    var ex = state.config.exclude || [];
+    $("#exclude-note").textContent = ex.length
+      ? "제외: " + ex.join(", ") + "  (이 번호는 뽑기에서 빠집니다)"
+      : "제외할 번호를 누르면 그 번호는 뽑히지 않습니다.";
   }
 
   function resetSettings() {
@@ -327,14 +474,37 @@
       if (confirm("생성 기록을 모두 지울까요?")) { S.clearHistory(); renderHistory(); }
     });
 
+    $("#btn-toggle-chart").addEventListener("click", function () {
+      var card = $("#freq-chart-card");
+      card.hidden = !card.hidden;
+      $("#btn-toggle-chart").textContent = card.hidden ? "번호별 통계 보기" : "번호별 통계 숨기기";
+      if (!card.hidden) renderFreqChart();
+    });
+    $all("#freq-range button").forEach(function (b) {
+      b.addEventListener("click", function () { freqRange = b.dataset.range; renderFreqChart(); });
+    });
+    $("#check-round").addEventListener("change", renderCheck);
+
+    $("#banner-fetch").addEventListener("click", function () {
+      $("#new-draw-banner").hidden = true;
+      showTab("draws");
+      fetchNewDraws();
+    });
+    $("#banner-hide").addEventListener("click", function () {
+      $("#new-draw-banner").hidden = true;
+      try { localStorage.setItem("lotto.bannerHideDate", new Date().toISOString().slice(0, 10)); } catch (e) {}
+    });
+
     $all(".tabbar button").forEach(function (b) {
       b.addEventListener("click", function () { showTab(b.dataset.tab); });
     });
 
     var startTab = "generate";
     try { startTab = localStorage.getItem("lotto.tab") || "generate"; } catch (e) {}
-    showTab(startTab === "generate" ? "generate" : startTab);
+    var validTabs = ["generate", "draws", "check", "history", "settings"];
+    showTab(validTabs.indexOf(startTab) >= 0 ? startTab : "generate");
     renderGenerate();
+    maybeShowBanner();
 
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", function () {

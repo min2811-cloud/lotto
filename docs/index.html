@@ -21,6 +21,13 @@
     <main>
       <!-- 뽑기 -->
       <section class="screen" id="screen-generate">
+        <div class="banner" id="new-draw-banner" hidden>
+          <span id="banner-text">새 회차가 나왔을 수 있어요.</span>
+          <span class="banner-actions">
+            <button id="banner-fetch">지금 받아오기</button>
+            <button id="banner-hide" class="banner-x" aria-label="닫기">✕</button>
+          </span>
+        </div>
         <div class="card" id="gen-base"></div>
         <button class="btn" id="btn-generate">20게임 뽑기</button>
         <button class="btn secondary" id="btn-reroll" hidden>고정 안 한 것만 다시 뽑기</button>
@@ -48,6 +55,27 @@
         </form>
         <h2 class="sec">최근 회차</h2>
         <div class="card" id="draws-list"></div>
+
+        <button class="btn secondary" id="btn-toggle-chart">번호별 통계 보기</button>
+        <div class="card" id="freq-chart-card" hidden>
+          <div class="seg" id="freq-range">
+            <button data-range="100" class="active">최근 100회</button>
+            <button data-range="all">전체</button>
+          </div>
+          <div id="freq-chart"></div>
+          <div class="muted small" id="freq-note"></div>
+        </div>
+      </section>
+
+      <!-- 당첨 확인 -->
+      <section class="screen" id="screen-check" hidden>
+        <div class="card">
+          <label class="field"><span>기준 회차</span>
+            <input id="check-round" type="number" inputmode="numeric" />
+          </label>
+          <div class="muted small" id="check-win"></div>
+        </div>
+        <div id="check-list"></div>
       </section>
 
       <!-- 기록 -->
@@ -65,12 +93,19 @@
         </div>
         <button class="btn secondary" id="btn-reset-settings">기본값으로 되돌리기</button>
         <p class="hint">겹침 개수(0/1/2)와 통계 그룹의 뽑는 방식(각 15개 중 2개)은 고정입니다. 게임 수와 '최근 통계' 기준 회차 수만 조절됩니다.</p>
+
+        <h2 class="sec">제외할 번호 (선택)</h2>
+        <div class="card">
+          <div id="exclude-grid" class="chip-grid"></div>
+          <div class="muted small" id="exclude-note" style="margin-top:8px"></div>
+        </div>
       </section>
     </main>
 
     <nav class="tabbar">
       <button data-tab="generate" class="active"><span class="ico">🎲</span>뽑기</button>
       <button data-tab="draws"><span class="ico">📅</span>회차</button>
+      <button data-tab="check"><span class="ico">✅</span>당첨</button>
       <button data-tab="history"><span class="ico">🕘</span>기록</button>
       <button data-tab="settings"><span class="ico">⚙️</span>설정</button>
     </nav>

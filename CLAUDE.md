@@ -17,12 +17,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **메인: 휴대폰 앱 (PWA) — `docs/`.** 오프라인 로또 번호 조합기.
 - 순수 HTML/CSS/JS, 프레임워크 없음. `<script>` 순서 로드, 전역 `window.Lotto.*`.
 - `docs/rules.js` 는 `tools/lotto_rules.py` 의 **포팅**이다. **규칙의 기준은 파이썬**이고, 규칙을 바꾸면 양쪽 다 고친다.
+  - 예외: `config.exclude`(제외 번호)는 **앱 전용 옵션**. 파이썬엔 없음. 빈 배열이면 결과가 파이썬과 동일.
 - 전 회차 데이터는 `docs/seed-draws.js` 에 내장 (`scripts/build_app_data.py` 가 `data/lotto_draws.json` 에서 생성).
 - 새 회차 fetch: `docs/lottery-api.js` → `smok95.github.io/lotto` 미러 (CORS 허용됨). 오프라인이면 수동 입력.
 - 서비스워커(`docs/sw.js`)가 앱 파일 캐시 → 첫 방문 후 완전 오프라인. 배포 때마다 `CACHE` 버전 +1 (`scripts/deploy_prep.py`).
-- 규칙 검증: `docs/selftest.html` 를 브라우저로 열어 PASS 확인.
-- 배포: `앱_설치.md` (Netlify Drop 또는 GitHub Pages `/docs`). GitHub Pages 쓰면 `배포.bat` 더블클릭으로 자동.
-- 헤드리스 검증 스크립트 예시는 스크래치패드에 있었음 (playwright). 재현하려면 `pip install playwright && playwright install chromium`.
+- 화면 5탭: 뽑기 / 회차(번호별 통계 그래프 포함) / 당첨(기록 vs 회차 대조·등수) / 기록 / 설정(게임수·기준회차·제외번호).
+  뽑기 상단에 "새 회차 나왔을 수 있음" 배너(토 21시~월, 최신 회차 7일+ 경과 시). 진짜 푸시 알림은 서버 필요해서 미구현.
+- 규칙 검증: `docs/selftest.html` 를 로컬 서버로 열어 "전체 통과" 확인.
+- 배포: `앱_설치.md`. GitHub Pages 경로 = `깃허브연결.bat`(최초 1회) → 이후 `배포.bat`. Netlify Drop 도 가능.
+- 헤드리스 검증(playwright): `pip install playwright && playwright install chromium` 후 스크래치패드 스크립트 참고.
 
 **보조: 주간 로또 번호 생성 (데스크톱)** (`workflows/lotto_weekly.md`).
 - `run.py` / `로또번호.bat` — 최신 당첨번호 반영 → 20게임 생성 → PNG → (연결 시) 카카오톡 전송
@@ -89,6 +92,7 @@ data/               # 당첨번호 캐시(lotto_draws.json) + output/ 생성 이
 run.py              # 데스크톱 로또 주간 실행 진입점
 로또번호.bat        # 데스크톱 실행 (더블클릭)
 카카오연결.bat      # 카카오톡 최초 연결
+깃허브연결.bat      # GitHub Pages 최초 1회 연결 (remote 등록 + 첫 push)
 배포.bat            # 앱 업데이트 → git push (GitHub Pages 배포 시)
 .env                # 모든 비밀. API 키, 인증 정보
 credentials.json    # 구글 OAuth 인증 (gitignore)

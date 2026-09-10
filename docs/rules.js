@@ -7,6 +7,7 @@
   for (var i = 1; i <= 45; i++) ALL.push(i);
 
   // 기본 규칙 (설정에서 게임 수 / 기준 회차 수만 바뀐다)
+  // exclude 는 앱 전용 옵션 — 파이썬 규칙에는 없음. 빈 배열이면 결과 동일.
   var DEFAULT_CONFIG = {
     overlap: [
       { key: "overlap0", label: "직전 회차와 겹치는 숫자 0개", overlap: 0, count: 4 },
@@ -16,7 +17,8 @@
     stat: [
       { key: "stat_recent", label: "최근 {n}회차 통계 조합", window: 100, count: 5 },
       { key: "stat_all", label: "전체 {n}회차 통계 조합", window: null, count: 5 }
-    ]
+    ],
+    exclude: []
   };
 
   function ballColor(n) {
@@ -58,14 +60,33 @@
     return a.slice(0, k);
   }
 
-  function frequencyRanking(draws) {
+  function frequencyCounts(draws) {
     var count = new Array(46).fill(0);
     for (var d = 0; d < draws.length; d++) {
       var nums = draws[d].numbers;
       for (var n = 0; n < nums.length; n++) count[nums[n]]++;
     }
+    return count; // 인덱스 1..45 사용
+  }
+
+  function frequencyRanking(draws) {
+    var count = frequencyCounts(draws);
     // 출현수 많은 순, 같으면 숫자 작은 순
     return ALL.slice().sort(function (x, y) { return (count[y] - count[x]) || (x - y); });
+  }
+
+  /* 한 게임을 당첨번호와 대조. 반환 {matched, bonusHit, rank(0=꽝,1~5)} */
+  function checkGame(game, winNumbers, bonus) {
+    var win = new Set(winNumbers);
+    var matched = game.filter(function (n) { return win.has(n); }).length;
+    var bonusHit = game.indexOf(bonus) >= 0;
+    var rank = 0;
+    if (matched === 6) rank = 1;
+    else if (matched === 5 && bonusHit) rank = 2;
+    else if (matched === 5) rank = 3;
+    else if (matched === 4) rank = 4;
+    else if (matched === 3) rank = 5;
+    return { matched: matched, bonusHit: bonusHit, rank: rank };
   }
 
   function drawGame(poolsAndCounts, rand) {
@@ -92,11 +113,13 @@
       seen.add(k);
       games.push(g);
     }
-    while (games.length < want) { // 조합이 극단적으로 부족하면 중복 허용 (파이썬과 동일)
+    var fbAttempts = 0;
+    while (games.length < want && fbAttempts < 2000) { // 조합이 극단적으로 부족하면 중복 허용
+      fbAttempts++;
       var g2 = drawGame(poolsAndCounts, rand);
       if (new Set(g2).size === 6) games.push(g2);
     }
-    return games;
+    return games; // 제외 번호를 너무 많이 넣어 6개를 못 만들면 게임 수가 모자랄 수 있음
   }
 
   /* draws: [{round, numbers:[6], bonus, date}]
@@ -107,18 +130,25 @@
     opts = opts || {};
     var rand = makeRng(opts.seed);
 
+    var exclude = new Set(config.exclude || []);
+    var drop = function (arr) { return arr.filter(function (n) { return !exclude.has(n); }); };
+    // 풀이 뽑을 개수보다 작아지면 개수를 줄인다 (제외 번호 과다 시 안전장치)
+    var pair = function (pool, k) { return [pool, Math.min(k, pool.length)]; };
+
     var ordered = draws.slice().sort(function (a, b) { return a.round - b.round; });
     var base = ordered[ordered.length - 1];
     var baseNumbers = base.numbers.slice().sort(function (a, b) { return a - b; });
     var baseSet = new Set(baseNumbers);
-    var others = ALL.filter(function (n) { return !baseSet.has(n); });
+    var baseAvail = drop(baseNumbers);
+    var others = drop(ALL.filter(function (n) { return !baseSet.has(n); }));
 
     var seen = new Set(opts.lockedKeys ? Array.from(opts.lockedKeys) : []);
     var groups = [];
 
     for (var o = 0; o < config.overlap.length; o++) {
       var g = config.overlap[o];
-      var pools = [[baseNumbers, g.overlap], [others, 6 - g.overlap]];
+      var fromBase = pair(baseAvail, g.overlap);
+      var pools = [fromBase, pair(others, 6 - fromBase[1])];
       groups.push({ key: g.key, label: g.label, games: uniqueGames(pools, g.count, rand, seen) });
     }
 
@@ -127,11 +157,11 @@
       var sg = config.stat[s];
       var subset = (sg.window == null) ? ordered : ordered.slice(-sg.window);
       var ranking = frequencyRanking(subset);
-      var top15 = ranking.slice(0, 15), mid15 = ranking.slice(15, 30), bottom15 = ranking.slice(30, 45);
+      var top15 = drop(ranking.slice(0, 15)), mid15 = drop(ranking.slice(15, 30)), bottom15 = drop(ranking.slice(30, 45));
       groups.push({
         key: sg.key,
         label: sg.label.replace("{n}", String(subset.length)),
-        games: uniqueGames([[top15, 2], [mid15, 2], [bottom15, 2]], sg.count, rand, seen)
+        games: uniqueGames([pair(top15, 2), pair(mid15, 2), pair(bottom15, 2)], sg.count, rand, seen)
       });
       stats[sg.key] = {
         count: subset.length,
@@ -157,6 +187,8 @@
   window.Lotto.rules = {
     generate: generate,
     frequencyRanking: frequencyRanking,
+    frequencyCounts: frequencyCounts,
+    checkGame: checkGame,
     ballColor: ballColor,
     gameKey: gameKey,
     DEFAULT_CONFIG: DEFAULT_CONFIG,

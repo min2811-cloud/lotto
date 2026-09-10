@@ -146,11 +146,11 @@ form.stack input { margin-top: 4px; }
   z-index: 10;
 }
 .tabbar button {
-  flex: 1; background: none; border: 0; padding: 10px 4px 12px;
-  color: var(--muted); font-size: 11px; cursor: pointer; font: inherit;
+  flex: 1; background: none; border: 0; padding: 9px 2px 11px;
+  color: var(--muted); font-size: 10.5px; cursor: pointer; font: inherit;
   display: flex; flex-direction: column; align-items: center; gap: 3px;
 }
-.tabbar button .ico { font-size: 20px; }
+.tabbar button .ico { font-size: 19px; }
 .tabbar button.active { color: var(--brand); font-weight: 700; }
 
 /* 토스트 */
@@ -164,3 +164,50 @@ form.stack input { margin-top: 4px; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 .hint { font-size: 12.5px; color: var(--muted); margin: 6px 2px 0; }
+
+/* 새 회차 배너 */
+.banner {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: #fff6d6; color: #6b5900; border: 1px solid #f2e2a0;
+  border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; font-size: 13.5px;
+}
+@media (prefers-color-scheme: dark) { .banner { background: #3a3413; color: #f2df9e; border-color: #5c5220; } }
+.banner .banner-actions { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.banner button {
+  background: var(--brand); color: #fff; border: 0; border-radius: 8px;
+  padding: 7px 10px; font: inherit; font-size: 12.5px; cursor: pointer;
+}
+.banner .banner-x { background: transparent; color: inherit; padding: 6px; font-size: 14px; }
+
+/* 세그먼트 토글 */
+.seg { display: flex; gap: 6px; margin-bottom: 12px; }
+.seg button {
+  flex: 1; padding: 8px; border: 1px solid var(--line); background: var(--bg);
+  color: var(--muted); border-radius: 8px; font: inherit; font-size: 13px; cursor: pointer;
+}
+.seg button.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+/* 번호별 막대그래프 */
+#freq-chart {
+  display: flex; align-items: flex-end; gap: 1px; height: 140px;
+}
+.fbar { flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+.fbar-fill { width: 100%; border-radius: 2px 2px 0 0; min-height: 2px; }
+.fbar-n { font-size: 7.5px; color: var(--muted); margin-top: 2px; height: 9px; line-height: 1; }
+#freq-note { margin-top: 10px; line-height: 1.5; }
+
+/* 제외 번호 칩 */
+.chip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 6px; }
+.chip {
+  padding: 8px 0; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+  border-radius: 8px; font: inherit; font-size: 13px; cursor: pointer; text-align: center;
+}
+.chip.on { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+/* 당첨 확인 */
+.ball.hit { outline: 3px solid var(--ink); outline-offset: 1px; }
+.rank { font-weight: 700; font-size: 12px; padding: 2px 7px; border-radius: 999px; color: #fff; flex: 0 0 auto; }
+.rank1 { background: #e5484d; } .rank2 { background: #f76808; } .rank3 { background: #f5a623; }
+.rank4 { background: #30a46c; } .rank5 { background: #6b7480; }
+.win-summary { color: #30a46c; font-weight: 700; font-size: 13px; }
+#check-win .balls { display: inline-flex; vertical-align: middle; }

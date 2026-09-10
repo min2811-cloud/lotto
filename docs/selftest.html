@@ -112,6 +112,40 @@
         return r.stats.stat_recent.count === 50;
       });
 
+      check("checkGame 등수 판정", function () {
+        var win = [1, 2, 3, 4, 5, 6], bonus = 7;
+        return R.checkGame([1, 2, 3, 4, 5, 6], win, bonus).rank === 1
+          && R.checkGame([1, 2, 3, 4, 5, 7], win, bonus).rank === 2
+          && R.checkGame([1, 2, 3, 4, 5, 8], win, bonus).rank === 3
+          && R.checkGame([1, 2, 3, 4, 8, 9], win, bonus).rank === 4
+          && R.checkGame([1, 2, 3, 8, 9, 10], win, bonus).rank === 5
+          && R.checkGame([1, 2, 8, 9, 10, 11], win, bonus).rank === 0;
+      });
+
+      check("frequencyCounts: 길이 46, 합 = 회차수*6", function () {
+        var c = R.frequencyCounts(draws);
+        var sum = c.reduce(function (a, b) { return a + b; }, 0);
+        return c.length === 46 && sum === draws.length * 6;
+      });
+
+      check("제외 번호: 결과에 제외 번호가 없다", function () {
+        var cfg = JSON.parse(JSON.stringify(R.DEFAULT_CONFIG));
+        cfg.exclude = [1, 2, 3, 7, 13, 44];
+        var r = R.generate(draws, cfg, { seed: 5 });
+        var ex = new Set(cfg.exclude);
+        return r.groups.every(function (g) {
+          return g.games.every(function (game) {
+            return game.every(function (n) { return !ex.has(n); });
+          });
+        });
+      });
+
+      check("제외 번호 없으면 기본과 동일 (20게임)", function () {
+        var cfg = JSON.parse(JSON.stringify(R.DEFAULT_CONFIG));
+        cfg.exclude = [];
+        return R.generate(draws, cfg, { seed: 9 }).total_games === 20;
+      });
+
       var v = document.getElementById("verdict");
       if (failed === 0) { v.className = "ok"; v.textContent = "전체 통과 ✅"; }
       else { v.className = "bad"; v.textContent = failed + "개 실패 ❌"; }
