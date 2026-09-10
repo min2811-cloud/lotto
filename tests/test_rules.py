@@ -17,16 +17,10 @@ FAKE_DRAWS = [
 
 def _check(result: dict) -> None:
     base = set(result["base_numbers"])
-    top = set(result["freq_top15"])
-    mid = set(result["freq_mid15"])
-    bot = set(result["freq_bottom15"])
-
-    assert len(top) == len(mid) == len(bot) == 15
-    assert top.isdisjoint(mid) and top.isdisjoint(bot) and mid.isdisjoint(bot)
-    assert top | mid | bot == set(range(1, 46))
 
     groups = {g["key"]: g["games"] for g in result["groups"]}
-    assert [len(groups[k]) for k in ("overlap0", "overlap1", "overlap2", "stat")] == [4, 4, 2, 10]
+    keys = ("overlap0", "overlap1", "overlap2", "stat_recent", "stat_all")
+    assert [len(groups[k]) for k in keys] == [4, 4, 2, 5, 5]
     assert result["total_games"] == 20
 
     for game in groups["overlap0"]:
@@ -36,10 +30,21 @@ def _check(result: dict) -> None:
     for game in groups["overlap2"]:
         assert len(base & set(game)) == 2
 
-    for game in groups["stat"]:
-        g = set(game)
-        assert len(g) == 6
-        assert len(g & top) == 2 and len(g & mid) == 2 and len(g & bot) == 2
+    for stat_key in ("stat_recent", "stat_all"):
+        buckets = result["stats"][stat_key]
+        top = set(buckets["top15"])
+        mid = set(buckets["mid15"])
+        bot = set(buckets["bottom15"])
+        assert len(top) == len(mid) == len(bot) == 15
+        assert top.isdisjoint(mid) and top.isdisjoint(bot) and mid.isdisjoint(bot)
+        assert top | mid | bot == set(range(1, 46))
+        for game in groups[stat_key]:
+            g = set(game)
+            assert len(g) == 6
+            assert len(g & top) == 2 and len(g & mid) == 2 and len(g & bot) == 2
+
+    all_games = [tuple(game) for group in result["groups"] for game in group["games"]]
+    assert len(all_games) == len(set(all_games)) == 20  # 20게임 서로 중복 없음
 
     for group in result["groups"]:
         for game in group["games"]:
@@ -59,7 +64,9 @@ def test_deterministic_with_seed():
 
 
 def test_frequency_window_size():
-    assert generate_all(FAKE_DRAWS, seed=0)["recent_count"] == RECENT_WINDOW
+    stats = generate_all(FAKE_DRAWS, seed=0)["stats"]
+    assert stats["stat_recent"]["count"] == RECENT_WINDOW
+    assert stats["stat_all"]["count"] == len(FAKE_DRAWS)
     assert len(frequency_ranking(FAKE_DRAWS)) == 45
 
 

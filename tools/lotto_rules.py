@@ -4,10 +4,9 @@
   1) 직전 회차 번호와 겹치는 숫자가 0개인 조합 4게임
   2) 직전 회차 번호와 겹치는 숫자가 1개인 조합 4게임
   3) 직전 회차 번호와 겹치는 숫자가 2개인 조합 2게임
-  4) 최근 100회차 통계 조합 10게임
-     - 가장 많이 나온 15개 중 2개
-     - 가장 적게 나온 15개 중 2개
-     - 나머지 15개 중 2개
+  4) 최근 100회차 통계 조합 5게임
+     - 가장 많이 나온 15개 중 2개 + 가장 적게 나온 15개 중 2개 + 나머지 15개 중 2개
+  5) 전체 회차 통계 조합 5게임 (같은 방식, 순위는 전체 회차로 다시 매김)
 
 동점 처리: 나온 횟수가 같으면 숫자가 작은 쪽을 앞선 순위로 본다.
 """
@@ -27,7 +26,11 @@ OVERLAP_GROUPS = [
     ("overlap1", "직전 회차와 겹치는 숫자 1개", 1, 4),
     ("overlap2", "직전 회차와 겹치는 숫자 2개", 2, 2),
 ]
-STAT_GAME_COUNT = 10
+# (그룹 키, 라벨 템플릿, 사용할 회차 수(None=전체), 게임 수)
+STAT_GROUPS = [
+    ("stat_recent", "최근 {n}회차 통계 조합", RECENT_WINDOW, 5),
+    ("stat_all", "전체 {n}회차 통계 조합", None, 5),
+]
 
 
 def frequency_ranking(draws: list[dict]) -> list[int]:
@@ -70,10 +73,6 @@ def generate_all(draws: list[dict], seed: int | None = None) -> dict:
     base_numbers = set(base["numbers"])
     others = [n for n in ALL_NUMBERS if n not in base_numbers]
 
-    window = ordered[-RECENT_WINDOW:]
-    ranking = frequency_ranking(window)
-    top15, mid15, bottom15 = ranking[:15], ranking[15:30], ranking[30:45]
-
     seen: set = set()
     groups: list[dict] = []
 
@@ -85,12 +84,22 @@ def generate_all(draws: list[dict], seed: int | None = None) -> dict:
             "games": _unique_games(pools, count, rng, seen),
         })
 
-    stat_pools = [(top15, 2), (mid15, 2), (bottom15, 2)]
-    groups.append({
-        "key": "stat",
-        "label": f"최근 {len(window)}회차 통계 조합",
-        "games": _unique_games(stat_pools, STAT_GAME_COUNT, rng, seen),
-    })
+    stats: dict = {}
+    for key, label_tmpl, window_size, count in STAT_GROUPS:
+        subset = ordered if window_size is None else ordered[-window_size:]
+        ranking = frequency_ranking(subset)
+        top15, mid15, bottom15 = ranking[:15], ranking[15:30], ranking[30:45]
+        groups.append({
+            "key": key,
+            "label": label_tmpl.format(n=len(subset)),
+            "games": _unique_games([(top15, 2), (mid15, 2), (bottom15, 2)], count, rng, seen),
+        })
+        stats[key] = {
+            "count": len(subset),
+            "top15": sorted(top15),
+            "mid15": sorted(mid15),
+            "bottom15": sorted(bottom15),
+        }
 
     return {
         "generated_at": datetime.now().isoformat(timespec="minutes"),
@@ -98,10 +107,7 @@ def generate_all(draws: list[dict], seed: int | None = None) -> dict:
         "base_date": base["date"],
         "base_numbers": sorted(base_numbers),
         "base_bonus": base["bonus"],
-        "recent_count": len(window),
-        "freq_top15": sorted(top15),
-        "freq_mid15": sorted(mid15),
-        "freq_bottom15": sorted(bottom15),
+        "stats": stats,
         "groups": groups,
         "total_games": sum(len(g["games"]) for g in groups),
     }
